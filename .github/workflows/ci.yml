@@ -41,6 +41,7 @@ jobs:
           julia --project=@. -e '
             using Pkg
             Pkg.Registry.add(RegistrySpec(url = "https://github.com/RoyCCWang/RWPublicJuliaRegistry"))
+            '
             
         shell: bash
         env:
@@ -70,6 +71,7 @@ jobs:
             import Pkg; Pkg.add("Documenter")
             using Pkg
             Pkg.Registry.add(RegistrySpec(url = "https://github.com/RoyCCWang/RWPublicJuliaRegistry"))
+            '
 
             Pkg.develop(PackageSpec(path=pwd()))
             Pkg.instantiate()'
@@ -82,6 +84,7 @@ jobs:
             using Documenter: doctest
             using Pkg
             Pkg.Registry.add(RegistrySpec(url = "https://github.com/RoyCCWang/RWPublicJuliaRegistry"))
+            '
 
             using NMRHamiltonian
             const HAM = NMRHamiltonian
@@ -90,7 +93,7 @@ jobs:
         env:
           DATADEPS_ALWAYS_ACCEPT: true
       - run: julia --project=docs docs/make.jl 'using Pkg;
-            Pkg.Registry.add(RegistrySpec(url = "https://github.com/RoyCCWang/RWPublicJuliaRegistry"))
+            Pkg.Registry.add(RegistrySpec(url = "https://github.com/RoyCCWang/RWPublicJuliaRegistry"))'
                         
         shell: bash
         env:
