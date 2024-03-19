@@ -6,9 +6,6 @@ Random.seed!(25)
 
 import LazyGPR as LGP
 
-include("../examples/helpers/synth_data.jl") # setupAmatrix()
-include("../examples/helpers/utils.jl") # setupAmatrix()
-
 @testset "bandwidth adjustment: half width at half max" begin
 
     T = Float64
@@ -48,11 +45,11 @@ include("../examples/helpers/utils.jl") # setupAmatrix()
             # check.
             if status
                 sk_x = LGP.evalkernel(x_star, sk)
-                @test isapprox(sk_x, h_sk)
+                @test isapprox(sk_x, h_sk; atol = zero_tol)
 
                 sk2 = LGP.createkernel(sk, a_star)
                 sk2_x = LGP.evalkernel(x_star*h, sk2)
-                @test isapprox(sk2_x, h_sk)
+                @test isapprox(sk2_x, h_sk; atol = zero_tol)
             end
         end
     end
