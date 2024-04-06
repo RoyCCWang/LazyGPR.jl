@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Demo: Oscillation Reduction · LazyGPR.jl</title><meta name="title" content="Demo: Oscillation Reduction · LazyGPR.jl"/><meta property="og:title" content="Demo: Oscillation Reduction · LazyGPR.jl"/><meta property="twitter:title" content="Demo: Oscillation Reduction · LazyGPR.jl"/><meta name="description" content="Documentation for LazyGPR.jl."/><meta property="og:description" content="Documentation for LazyGPR.jl."/><meta property="twitter:description" content="Documentation for LazyGPR.jl."/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">LazyGPR.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Overview</a></li><li><a class="tocitem" href="../../api/">Public API</a></li><li><a class="tocitem" href="../compare_warpmaps_lit/">Visualize Warp Samples</a></li><li><a class="tocitem" href="../s_map_lit/">Visualize Adjustment Map</a></li><li class="is-active"><a class="tocitem" href>Demo: Oscillation Reduction</a><ul class="internal"><li class="toplevel"><a class="tocitem" href="#Hyperparameter-Optimization"><span>Hyperparameter Optimization</span></a></li><li class="toplevel"><a class="tocitem" href="#Query"><span>Query</span></a></li><li><a class="tocitem" href="#Setup-query-region"><span>Setup query region</span></a></li><li><a class="tocitem" href="#Stationary-Kernel-Model"><span>Stationary Kernel Model</span></a></li><li><a class="tocitem" href="#DE-kernel&#39;s-canonical-kernel-model"><span>DE kernel&#39;s canonical kernel model</span></a></li><li><a class="tocitem" href="#DE-kernel-model"><span>DE kernel model</span></a></li><li class="toplevel"><a class="tocitem" href="#Visualize"><span>Visualize</span></a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Demo: Oscillation Reduction</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Demo: Oscillation Reduction</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/RoyCCWang/LazyGPR.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/RoyCCWang/LazyGPR.jl/blob/main/examples/rainfall.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><p>In this demo, we compare the query from a DE kernel GPR and a stationary kernel GPR. Please make sure the <code>RWPublicJuliaRegistry</code> custom registry is installed. You can install it by running the command <code>using Pkg</code><code></code>pkg&quot;registry add General https://github.com/RoyCCWang/RWPublicJuliaRegistry&quot;`</p><h1 id="Setup"><a class="docs-heading-anchor" href="#Setup">Setup</a><a id="Setup-1"></a><a class="docs-heading-anchor-permalink" href="#Setup" title="Permalink"></a></h1><pre><code class="language-julia hljs">#Install dependencies
+import Pkg
+let
+    pkgs = [&quot;SingleLinkagePartitions&quot;, &quot;Distances&quot;, &quot;DataFrames&quot;, &quot;CSV&quot;, &quot;Metaheuristics&quot;, &quot;LazyGPR&quot;, &quot;PythonPlot&quot;, &quot;VisualizationBag&quot;, &quot;Statistics&quot;, &quot;SpatialGSP&quot;]
+    for pkg in pkgs
+        if Base.find_package(pkg) === nothing
+            Pkg.add(pkg)
+        end
+    end
+end;
+
+#load
+import Random
+Random.seed!(25)
+
+using LinearAlgebra
+using Statistics
+
+import Distances
+import LazyGPR as LGP
+import SingleLinkagePartitions as SL
+import SpatialGSP as GSP
+
+import Metaheuristics as EVO
+import DataFrames as DF
+import CSV
+
+import VisualizationBag as VIZ
+import PythonPlot as PLT
+PLT.close(&quot;all&quot;)
+fig_num = 1
+
+T = Float64
+D = 2;</code></pre><p>User inputs</p><pre><code class="language-julia hljs">save_results_dir = &quot;output/&quot;
+if !ispath(save_results_dir)
+    mkpath(save_results_dir)
+end
+
+#optimization-related.
+f_calls_limit = 1_000
+ms_trait = LGP.MarginalLikelihood()
+
+#observation model&#39;s variance.
+σ² = convert(T, 1e-3);</code></pre><p>Get the training inputs, X, and outputs, y.</p><pre><code class="language-julia hljs">data_path = &quot;data/2023_08_10_CA_stations.csv&quot;
+df = CSV.read(data_path, DF.DataFrame)
+
+X0 = collect(
+    [
+        df.LATITUDE[n];
+        df.LONGITUDE[n];
+    ]
+    for n in eachindex(df.LATITUDE)
+)
+y0 = convert(Vector{T}, df.PRCP ./ 10)
+X, y = SL.avgduplicates(X0, y0, eps(T)*10);</code></pre><p>Compute warp samples that uses an axis-search graph construction, for scattered positions.</p><pre><code class="language-julia hljs">axis_config = GSP.AxisSearchConfig{T}(
+    kernel_σ_multiplier = convert(T, 3),
+    w_lb = convert(T, 0.1),
+)
+warp_config = GSP.WarpConfig{T}()
+smooth_iters = 0
+W = LGP.create_warp_samples(
+    LGP.UseSpatialGSP(GSP),
+    LGP.AxisGraph(),
+    X, y,
+    axis_config,
+    warp_config,
+);</code></pre><p>Create warp map from the samples.</p><pre><code class="language-julia hljs">import ScatteredInterpolation
+warpmap = LGP.create_warp_map(
+    LGP.UseScatteredInterpolation(ScatteredInterpolation),
+    X, W, 3,
+);</code></pre><p>Create the reference (dummy) DE Kernel that uses this warpmap.</p><pre><code class="language-julia hljs">ref_dek = LGP.DEKernel(
+    LGP.SqExpKernel(one(T)), warpmap, zero(T),
+);</code></pre><h1 id="Hyperparameter-Optimization"><a class="docs-heading-anchor" href="#Hyperparameter-Optimization">Hyperparameter Optimization</a><a id="Hyperparameter-Optimization-1"></a><a class="docs-heading-anchor-permalink" href="#Hyperparameter-Optimization" title="Permalink"></a></h1><p>Settings and variable bounds.</p><pre><code class="language-julia hljs">a_lb = convert(T, 1e-3)
+a_ub = convert(T, 60)
+N_initials_a = 100 #the number of intial guesses for optimizing the bandwidth a.
+
+κ_lb = zero(T)
+κ_ub = maximum(abs.(W))*100 #increase this until the solution gain does is not clipped by this value.
+N_initials_κ = 1_000; #the number of intial guesses for optimizing the gain κ.</code></pre><p>Put data in container.</p><pre><code class="language-julia hljs">gp_data = LGP.GPData(σ², X, y);</code></pre><p>We reset the random seed since the evolutionary optimization algorithm from Metaheuristics.jl is a random one.</p><pre><code class="language-julia hljs">Random.seed!(25)
+
+sk_ref = ref_dek.canonical
+p0s = collect( [x;] for x in LinRange(a_lb, a_ub, 100) )
+sk_vars, sk_star = LGP.optimize_kernel_hp(
+    LGP.UseMetaheuristics(EVO),
+    sk_ref,
+    ms_trait,
+    gp_data,
+    LGP.HCostConfig(),
+    LGP.MetaheuristicsConfig(
+        f_calls_limit = f_calls_limit,
+    ),
+    LGP.OptimContainer([a_lb;], [a_ub;], p0s)
+);</code></pre><p>The solution, score (lower is better):</p><pre><code class="language-julia hljs">sk_vars, sk_star</code></pre><pre><code class="nohighlight hljs">([30.192289102857256], 61618.821175642646)</code></pre><p>Reset the seed for the DE Kernel.</p><pre><code class="language-julia hljs">Random.seed!(25)
+
+a0s = collect(LinRange(a_lb, a_ub, 10))
+push!(a0s, sk_vars[begin])
+κ0s = LinRange(0, κ_ub, 20)
+p0s = collect.(
+    vec(collect(Iterators.product(a0s, κ0s)))
+)
+dek_vars, dek_star = LGP.optimize_kernel_hp(
+    LGP.UseMetaheuristics(EVO),
+    ref_dek,
+    ms_trait,
+    gp_data,
+    LGP.HCostConfig(),
+    LGP.MetaheuristicsConfig(
+        f_calls_limit = f_calls_limit,
+    ),
+    LGP.OptimContainer([a_lb; zero(T)], [a_ub; κ_ub;], p0s)
+);</code></pre><p>The solution (bandwidth, gain), score (lower is better):</p><pre><code class="language-julia hljs">dek_vars, dek_star</code></pre><pre><code class="nohighlight hljs">([0.23724657135499885, 23.1197898840871], 22804.40630587782)</code></pre><h1 id="Query"><a class="docs-heading-anchor" href="#Query">Query</a><a id="Query-1"></a><a class="docs-heading-anchor-permalink" href="#Query" title="Permalink"></a></h1><h2 id="Setup-query-region"><a class="docs-heading-anchor" href="#Setup-query-region">Setup query region</a><a id="Setup-query-region-1"></a><a class="docs-heading-anchor-permalink" href="#Setup-query-region" title="Permalink"></a></h2><p>Near Ottawa, Ontario, Canada.</p><pre><code class="language-julia hljs">x1_lb, x1_ub = 42.0, 51.0 # latitude bounds
+x2_lb, x2_ub = -80.0, -68.0 # longitude bounds
+
+#number of query points.
+Nq1 = 90
+Nq2 = 120
+Xqrs = ( # query grid, represented as ranges.
+    LinRange(x1_lb, x1_ub, Nq1),
+    LinRange(x2_lb, x2_ub, Nq2),
+)
+Xq = collect( Iterators.product(Xqrs...) ); #query positions.</code></pre><h2 id="Stationary-Kernel-Model"><a class="docs-heading-anchor" href="#Stationary-Kernel-Model">Stationary Kernel Model</a><a id="Stationary-Kernel-Model-1"></a><a class="docs-heading-anchor-permalink" href="#Stationary-Kernel-Model" title="Permalink"></a></h2><pre><code class="language-julia hljs">sk = LGP.SqExpKernel(sk_vars[begin]) #assemble the kernel
+gp_sk = LGP.fitGP(X, y, σ², sk) #fit GPR model
+
+sk_Xq = collect(
+    LGP.queryGP(collect(x), sk, gp_sk)
+    for x in Iterators.product(Xqrs...)
+)
+mqs_sk = map(xx-&gt;xx[begin], sk_Xq) #predictive mean
+vqs_sk = map(xx-&gt;xx[begin+1], sk_Xq); #predictive variance</code></pre><h2 id="DE-kernel&#39;s-canonical-kernel-model"><a class="docs-heading-anchor" href="#DE-kernel&#39;s-canonical-kernel-model">DE kernel&#39;s canonical kernel model</a><a id="DE-kernel&#39;s-canonical-kernel-model-1"></a><a class="docs-heading-anchor-permalink" href="#DE-kernel&#39;s-canonical-kernel-model" title="Permalink"></a></h2><pre><code class="language-julia hljs">ck = LGP.SqExpKernel(dek_vars[begin]) #assemble kernel
+gp_ck = LGP.fitGP(X, y, σ², ck) #fit GPR
+
+ck_Xq = collect(
+    LGP.queryGP(collect(x), ck, gp_ck)
+    for x in Iterators.product(Xqrs...)
+)
+mqs_ck = map(xx-&gt;xx[begin], ck_Xq) #predictive mean
+vqs_ck = map(xx-&gt;xx[begin+1], ck_Xq); #predictive variance</code></pre><h2 id="DE-kernel-model"><a class="docs-heading-anchor" href="#DE-kernel-model">DE kernel model</a><a id="DE-kernel-model-1"></a><a class="docs-heading-anchor-permalink" href="#DE-kernel-model" title="Permalink"></a></h2><pre><code class="language-julia hljs">a_star, κ_star = dek_vars
+dek = LGP.DEKernel( #Assemble DE kernel.
+    LGP.SqExpKernel(a_star),
+    warpmap,
+    κ_star,
+)
+gp_dek = LGP.fitGP(X, y, σ², dek); #Fit DE kernel GPR.</code></pre><p>Query the model.</p><pre><code class="language-julia hljs">dek_Xq = collect(
+    LGP.queryGP(collect(x), dek, gp_dek)
+    for x in Iterators.product(Xqrs...)
+)
+
+mqs_dek = map(xx-&gt;xx[begin], dek_Xq) #predictive mean
+vqs_dek = map(xx-&gt;xx[begin+1], dek_Xq); #predictive variance</code></pre><h1 id="Visualize"><a class="docs-heading-anchor" href="#Visualize">Visualize</a><a id="Visualize-1"></a><a class="docs-heading-anchor-permalink" href="#Visualize" title="Permalink"></a></h1><pre><code class="language-julia hljs">dpi = 300
+cmap = &quot;bwr&quot; # colormap for predictive means
+var_cmap = &quot;Greys&quot;; # for variance</code></pre><p>For consistent visual comparison of the means, clamp colors to the max magnitude range of the data, and force symmetry about zero.</p><pre><code class="language-julia hljs">vmax = maximum(y)
+vmin = -vmax;</code></pre><p>DE kernel model, mean:</p><pre><code class="language-julia hljs">fig_num = VIZ.plotmeshgrid2D(
+    PLT,
+    collect(Xqrs),
+    mqs_dek,
+    X,
+    &quot;o&quot;,
+    fig_num,
+    &quot;DE kernel - predictive mean&quot;;
+    cmap = cmap,
+    vmin = vmin,
+    vmax = vmax,
+    horizontal_title = &quot;Longitude&quot;,
+    vertical_title = &quot;Latitude&quot;,
+    matrix_mode = true,
+)
+PLT.gca().invert_yaxis()
+PLT.gcf()</code></pre><p><img src="../rainfall_lit-43.png" alt/></p><p>DE kernel model, variance:</p><pre><code class="language-julia hljs">fig_num = VIZ.plotmeshgrid2D(
+    PLT,
+    collect(Xqrs),
+    vqs_dek,
+    X,
+    &quot;o&quot;,
+    fig_num,
+    &quot;DE kernel - predictive variance&quot;;
+    cmap = var_cmap,
+    horizontal_title = &quot;Longitude&quot;,
+    vertical_title = &quot;Latitude&quot;,
+    matrix_mode = true,
+)
+PLT.gca().invert_yaxis()
+PLT.gcf()</code></pre><p><img src="../rainfall_lit-45.png" alt/></p><p>Stationary kernel model, mean:</p><pre><code class="language-julia hljs">fig_num = VIZ.plotmeshgrid2D(
+    PLT,
+    collect(Xqrs),
+    mqs_sk,
+    X,
+    &quot;o&quot;,
+    fig_num,
+    &quot;Stationary kernel - predictive mean&quot;;
+    cmap = cmap,
+    vmin = vmin,
+    vmax = vmax,
+    horizontal_title = &quot;Longitude&quot;,
+    vertical_title = &quot;Latitude&quot;,
+    matrix_mode = true,
+)
+PLT.gca().invert_yaxis()
+PLT.gcf()</code></pre><p><img src="../rainfall_lit-47.png" alt/></p><p>Stationary kernel model, variance:</p><pre><code class="language-julia hljs">fig_num = VIZ.plotmeshgrid2D(
+    PLT,
+    collect(Xqrs),
+    vqs_sk,
+    X,
+    &quot;o&quot;,
+    fig_num,
+    &quot;Stationary kernel - predictive variance&quot;;
+    cmap = var_cmap,
+    horizontal_title = &quot;Longitude&quot;,
+    vertical_title = &quot;Latitude&quot;,
+    matrix_mode = true,
+)
+PLT.gca().invert_yaxis()
+PLT.gcf()</code></pre><p><img src="../rainfall_lit-49.png" alt/></p><p>Canonical kernel model, mean:</p><pre><code class="language-julia hljs">fig_num = VIZ.plotmeshgrid2D(
+    PLT,
+    collect(Xqrs),
+    mqs_ck,
+    X,
+    &quot;o&quot;,
+    fig_num,
+    &quot;Canonical kernel - predictive mean&quot;;
+    cmap = cmap,
+    vmin = vmin,
+    vmax = vmax,
+    horizontal_title = &quot;Longitude&quot;,
+    vertical_title = &quot;Latitude&quot;,
+    matrix_mode = true,
+)
+PLT.gca().invert_yaxis()
+PLT.gcf()</code></pre><p><img src="../rainfall_lit-51.png" alt/></p><p>Canonical kernel model, variance:</p><pre><code class="language-julia hljs">fig_num = VIZ.plotmeshgrid2D(
+    PLT,
+    collect(Xqrs),
+    vqs_ck,
+    X,
+    &quot;o&quot;,
+    fig_num,
+    &quot;Canonical kernel - predictive variance&quot;;
+    cmap = var_cmap,
+    horizontal_title = &quot;Longitude&quot;,
+    vertical_title = &quot;Latitude&quot;,
+    matrix_mode = true,
+)
+PLT.gca().invert_yaxis()
+PLT.gcf()</code></pre><p><img src="../rainfall_lit-53.png" alt/></p><p>The caonical kernel model exhibits significant Runge&#39;s phenomenon-like oscillatory behavior. The stationary kernel model has little oscillatory behavior, but has significantly reduced smoothing radius/ability. The DE kernel actually uses the same smoothing radius/ability as the canonical kernel, but it adjusts the smoothing amount across space to reduce oscillations.</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../s_map_lit/">« Visualize Adjustment Map</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.3.0 on <span class="colophon-date" title="Saturday 6 April 2024 23:32">Saturday 6 April 2024</span>. Using Julia version 1.10.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
