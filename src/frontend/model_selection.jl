@@ -30,14 +30,14 @@ end
 Fits the GPR hyperparameters for a single-process setup.
 """
 function optimize_kernel_hp(
-    alg_trait::ExtensionPkgs,
-    kernel::PositiveDefiniteKernel,
-    ms_trait::ModelSelection,
-    model::Union{LazyGP,GPData},
-    config::HyperparameterInferenceInfo,
-    solver_config::SolverConfig,
-    optim_info::OptimContainer{T},
-    ) where T <: Real
+        alg_trait::ExtensionPkgs,
+        kernel::PositiveDefiniteKernel,
+        ms_trait::ModelSelection,
+        model::Union{LazyGP, GPData},
+        config::HyperparameterInferenceInfo,
+        solver_config::SolverConfig,
+        optim_info::OptimContainer{T},
+    ) where {T <: Real}
 
     costfunc, Bs_info = create_hp_cost(
         resolvetrait(config),
@@ -94,7 +94,7 @@ About some of the field members:
     N_initials_a::Int = 100
     N_initials_κ::Int = 100
     width_factor::T = one(T) # default is to not change the bandwidth.
-    height_factor::T = convert(T, 1/2)
+    height_factor::T = convert(T, 1 / 2)
 end
 
 """
@@ -111,15 +111,15 @@ end
 The two-stage approach to optimizing the DE kernel hyperparameters.
 """
 function optimize_kernel_hp_separately(
-    alg_trait::ExtensionPkgs,
-    ref_dek::DEKernel,
-    ms_trait::ModelSelection,
-    model::Union{LazyGP,GPData},
-    config::HyperparameterInferenceInfo,
-    solver_config::SolverConfig,
-    optim_config::KernelOptimConfig{T},
-    ) where T <: Real
-    
+        alg_trait::ExtensionPkgs,
+        ref_dek::DEKernel,
+        ms_trait::ModelSelection,
+        model::Union{LazyGP, GPData},
+        config::HyperparameterInferenceInfo,
+        solver_config::SolverConfig,
+        optim_config::KernelOptimConfig{T},
+    ) where {T <: Real}
+
     # type conversion.
     a_lb = optim_config.a_lb
     a_ub = optim_config.a_ub
@@ -151,7 +151,7 @@ function optimize_kernel_hp_separately(
     if !status
         a_star = sk.a
     end
-    
+
     # # optimize κ.
     costfunc, Bs_info = create_hp_cost(
         resolvetrait(config),
@@ -162,7 +162,7 @@ function optimize_kernel_hp_separately(
     )
 
     # initial guesses.
-    p0s = collect( [a_star; x;] for x in κ0s )
+    p0s = collect([a_star; x;] for x in κ0s)
 
     # clamp the dek's bandwidth to a_star
     lbs = [a_star; zero(T)]
@@ -170,6 +170,91 @@ function optimize_kernel_hp_separately(
 
     # optimize.
     dek_vars, dek_star = run_optimizer(
+        alg_trait,
+        costfunc, lbs, ubs, solver_config, p0s,
+    )
+
+    # clean up.
+    free_hp_cost(Bs_info)
+
+    return dek_vars, dek_star, sk_vars, sk_star
+end
+
+function optimize_kernel_hp_separately_timing(
+        alg_trait::ExtensionPkgs,
+        ref_dek::DEKernel,
+        ms_trait::ModelSelection,
+        model::Union{LazyGP, GPData},
+        config::HyperparameterInferenceInfo,
+        solver_config::SolverConfig,
+        optim_config::KernelOptimConfig{T},
+    ) where {T <: Real}
+
+    # type conversion.
+    a_lb = optim_config.a_lb
+    a_ub = optim_config.a_ub
+    κ_ub = optim_config.κ_ub
+    width_factor = optim_config.width_factor
+    height_factor = optim_config.height_factor
+    N_initials_κ = optim_config.N_initials_κ
+
+    # generate initial guesses.
+    κ0s = LinRange(zero(T), κ_ub, N_initials_κ)
+
+    # # Optimize stationary kernel.
+    println("Stationary kernel:")
+    sk_vars, sk_star = optimize_kernel_hp(
+        alg_trait,
+        ref_dek.canonical,
+        MarginalLikelihood(),
+        model,
+        config,
+        solver_config,
+        optim_config,
+    )
+    @time optimize_kernel_hp(
+        alg_trait,
+        ref_dek.canonical,
+        MarginalLikelihood(),
+        model,
+        config,
+        solver_config,
+        optim_config,
+    )
+    sk = createkernel(ref_dek.canonical, sk_vars[begin])
+
+    # # adjust bandwidth.
+    a_star, _, status = findbandwidth(
+        sk, width_factor, a_lb, a_ub;
+        h_sk = height_factor,
+    )
+    if !status
+        a_star = sk.a
+    end
+
+    # # optimize κ.
+    costfunc, Bs_info = create_hp_cost(
+        resolvetrait(config),
+        ms_trait,
+        model,
+        ref_dek,
+        config,
+    )
+
+    # initial guesses.
+    p0s = collect([a_star; x;] for x in κ0s)
+
+    # clamp the dek's bandwidth to a_star
+    lbs = [a_star; zero(T)]
+    ubs = [a_star; κ_ub]
+
+    # optimize.
+    println("DE kernel:")
+    dek_vars, dek_star = run_optimizer(
+        alg_trait,
+        costfunc, lbs, ubs, solver_config, p0s,
+    )
+    @time run_optimizer(
         alg_trait,
         costfunc, lbs, ubs, solver_config, p0s,
     )
@@ -195,13 +280,13 @@ end
 Fits the GPR hyperparameters for multi-process, distributed computing setup.
 """
 function optimize_kernel_hp(
-    alg_trait::ExtensionPkgs,
-    ref_sk::StationaryKernel,
-    ms_trait::ModelSelection,
-    model::Union{LazyGP,GPData},
-    config::HyperparameterInferenceInfo,
-    solver_config::SolverConfig,
-    optim_config::KernelOptimConfig,
+        alg_trait::ExtensionPkgs,
+        ref_sk::StationaryKernel,
+        ms_trait::ModelSelection,
+        model::Union{LazyGP, GPData},
+        config::HyperparameterInferenceInfo,
+        solver_config::SolverConfig,
+        optim_config::KernelOptimConfig,
     )
     # type conversion.
     a_lb = optim_config.a_lb
@@ -209,12 +294,12 @@ function optimize_kernel_hp(
 
     # generate initial guesses.
     a0s = LinRange(a_lb, a_ub, optim_config.N_initials_a)
-    
+
     # initial guesses.
-    p0s = collect( [x;] for x in a0s )
-    
+    p0s = collect([x;] for x in a0s)
+
     optim_info = OptimContainer([a_lb;], [a_ub;], p0s)
-    
+
     return optimize_kernel_hp(
         alg_trait, ref_sk, ms_trait, model,
         config, solver_config, optim_info,
@@ -268,20 +353,20 @@ end
 # find a such that k_{a}(x) == k_{a_star}(x*h) == k_{any}(0) * h_sk.
 # k_{any}(0) is the maximum of the RBF k_{a}(.) for any `a`.
 function findbandwidth(
-    sk::Union{WendlandSplineKernel, SqExpKernel},
-    h::Real,
-    a_lb::T,
-    a_ub::T;
-    h_sk::Real = convert(T, 0.5), # half maximum.
-    ) where T <: AbstractFloat
-    
+        sk::Union{WendlandSplineKernel, SqExpKernel},
+        h::Real,
+        a_lb::T,
+        a_ub::T;
+        h_sk::Real = convert(T, 0.5), # half maximum.
+    ) where {T <: AbstractFloat}
+
     @assert a_lb < a_ub
     @assert h > 0
     @assert 0 < h_sk < 1
 
     # find the half width at half maximum
     k_max = evalkernel(zero(T), sk)
-    target_k = convert(T, h_sk*k_max)
+    target_k = convert(T, h_sk * k_max)
 
     x_ub = one(T)
     while isfinite(x_ub) && evalkernel(x_ub, sk) > target_k
@@ -292,7 +377,7 @@ function findbandwidth(
     end
     #@show x_ub # debug
 
-    f = xx->( evalkernel(xx, sk) - target_k )
+    f = xx -> (evalkernel(xx, sk) - target_k)
     x = Roots.find_zero(f, (zero(T), x_ub))
 
     # look for a such that we get target_k at distance x*h.
@@ -301,11 +386,11 @@ function findbandwidth(
         return sk.a, x, true
     end
 
-    x2 = convert(T, x*h)
-    g = pp->( evalkernel(x2, updatekernel(sk, [pp;])) - target_k )
-    
+    x2 = convert(T, x * h)
+    g = pp -> (evalkernel(x2, updatekernel(sk, [pp;])) - target_k)
+
     #@show h, h_sk, a_lb, a_ub, g(a_lb), g(a_ub) # debug
-    if  sign(g(a_lb)) == sign(g(a_ub))
+    if sign(g(a_lb)) == sign(g(a_ub))
         # there is no root in the interval (a_lb, a_ub)
         return sk.a, x, false
     end

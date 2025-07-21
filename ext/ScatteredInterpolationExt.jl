@@ -11,12 +11,12 @@ struct ShepardMap{IT}
 end
 
 function (ftr::ShepardMap)(
-    xrs::NTuple{D, AR},
+        xrs::NTuple{D, AR},
     ) where {D, AR <: AbstractRange}
-    
+
     return collect(
         ScatteredInterpolation.evaluate(ftr.etp, collect(x))[begin]
-        for x in Iterators.product(xrs...)
+            for x in Iterators.product(xrs...)
     )
 end
 
@@ -46,10 +46,10 @@ end
 # end
 
 function LazyGPR._createitp(
-    trait::LazyGPR.UseScatteredInterpolation,
-    X::AbstractVector,
-    y::AbstractArray,
-    p::Real,
+        trait::LazyGPR.UseScatteredInterpolation,
+        X::AbstractVector,
+        y::AbstractArray,
+        p::Real,
     )
 
     #X_mat = LazyGPR.ranges2matrix(X)
@@ -62,11 +62,11 @@ end
 
 # all extrapolation evalates to 0.
 function LazyGPR._createitp(
-    ::LazyGPR.UseScatteredInterpolation,
-    X_mat::Matrix{T},
-    y::Vector{T},
-    p::Real,
-    ) where T <: Real
+        ::LazyGPR.UseScatteredInterpolation,
+        X_mat::Matrix{T},
+        y::Vector{T},
+        p::Real,
+    ) where {T <: Real}
 
     itp_obj = ScatteredInterpolation.interpolate(
         ScatteredInterpolation.Shepard(p),
@@ -76,7 +76,5 @@ function LazyGPR._createitp(
 
     return ShepardMap(itp_obj)
 end
-
-
 
 end

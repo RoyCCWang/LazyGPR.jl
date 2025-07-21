@@ -3,38 +3,38 @@
 struct Enable end
 struct Disable end
 
-const BinarySelection = Union{Enable,Disable}
+const BinarySelection = Union{Enable, Disable}
 
 # for lazy querying.
-function computemean(
-    ::Enable,
-    buf::Vector{T}, # buffer.
-    y::Vector{T},
-    kq::Vector{T},
-    C,
-    )::T where T
+function computemean!(
+        ::Enable,
+        buf::Vector{T}, # buffer.
+        y::Vector{T},
+        kq::Vector{T},
+        C,
+    )::T where {T}
 
     ldiv!(buf, C, y)
     return dot(kq, buf)
 end
 
-function computemean(::Disable, ::Vector{T}, args...)::T where T
+function computemean!(::Disable, ::Vector{T}, args...)::T where {T}
     return convert(T, NaN)
 end
 
 # mutates buf, buffer.
 function computevar_term2!(
-    ::Enable,
-    buf::Vector{T}, # buffer.
-    kq::Vector{T},
-    C,
-    )::T where T
+        ::Enable,
+        buf::Vector{T}, # buffer.
+        kq::Vector{T},
+        C,
+    )::T where {T}
 
     ldiv!(buf, C, kq) # overwrites buf.
     return dot(kq, buf)
 end
 
-function computevar_term2!(::Disable, ::Vector{T}, args...)::T where T
+function computevar_term2!(::Disable, ::Vector{T}, args...)::T where {T}
     return convert(T, NaN)
 end
 
@@ -53,7 +53,6 @@ Possible values for each are: `LazyGPR.Enabled()` and `LazyGPR.Disabled()`.
     compute_mean::MT = Enable()
     compute_variance::VT = Enable()
 end
-
 
 
 # caching ϕ map over training inputs X.
@@ -86,14 +85,14 @@ struct AdjustmentMap{T <: AbstractFloat}
 end
 
 
-function AdjustmentMap(x0::T, y0::T, b_in, L::Integer)::AdjustmentMap{T} where T
+function AdjustmentMap(x0::T, y0::T, b_in, L::Integer)::AdjustmentMap{T} where {T}
     @assert y0 > 1
     @assert -b_in < x0 < b_in
     b = convert(T, b_in)
     b_L = b^L
-    
+
     x0_L = x0^L
-    a = -(b_L + y0*(x0_L -b_L))/x0_L
+    a = -(b_L + y0 * (x0_L - b_L)) / x0_L
     if a < 0
         println("Warning: computed a negative value for the :a field of AdjustmentMap.")
     end
@@ -106,7 +105,7 @@ end
 
 Evaluates the ξ curve from the adjustment map container `s`, at distance `x`.
 """
-function evalsmap(x, s::AdjustmentMap{T}) where T
+function evalsmap(x, s::AdjustmentMap{T}) where {T}
     a, b, L = s.a, s.b, s.L
     if abs(x) >= b
         return convert(T, Inf)
@@ -114,7 +113,7 @@ function evalsmap(x, s::AdjustmentMap{T}) where T
 
     x_L = x^L
     b_L = b^L
-    return -(a*x_L +b_L)/(x_L-b_L)
+    return -(a * x_L + b_L) / (x_L - b_L)
 end
 
 # for illustration and diagnostics.
@@ -127,7 +126,7 @@ evalsmap(norm(u-x), s)
 ```
 """
 function evalsmap(u, x, s::AdjustmentMap)
-    return evalsmap(norm(u-x), s)
+    return evalsmap(norm(u - x), s)
 end
 
 
@@ -175,7 +174,6 @@ struct SpatialSearchContainer{AV <: AbstractVector, NT <: NNTree}
 end
 
 
-
 # data.
 
 """
@@ -190,7 +188,7 @@ Container type for a conventional GPR model.
 struct GPData{T, D, XT <: Union{Vector, SpatialSearchContainer, NTuple}}
     σ²::T
     inputs::XT
-    outputs::Array{T,D}
+    outputs::Array{T, D}
 end
 
 """

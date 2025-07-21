@@ -1,4 +1,3 @@
-
 #### grid data.
 
 
@@ -30,11 +29,11 @@ In the current implementation, `warp_config` should be a data type of `SpatialGS
 As a post-processing step, `smooth_iters` performs smoothing by applying the adjacency matrix to the warp samples `smooth_iters` times.
 """
 function create_grid_warp_samples(
-    alg_trait::UseSpatialGSP,
-    y_nD::AbstractArray{T},
-    warp_config;
-    smooth_iters::Integer = 0,
-    ) where T
+        alg_trait::UseSpatialGSP,
+        y_nD::AbstractArray{T},
+        warp_config;
+        smooth_iters::Integer = 0,
+    ) where {T}
 
     alg = alg_trait.pkg
     ext = Base.get_extension(@__MODULE__, :SpatialGSPExt)
@@ -44,7 +43,7 @@ function create_grid_warp_samples(
     if !proceed_flag
         loaderr_ext_warp_samples_pkg()
     end
-    
+
     # see SpatilGSPExt.jl
     return _create_grid_warp_samples(alg_trait, y_nD, warp_config, smooth_iters)
 end
@@ -77,10 +76,10 @@ N_scales = round(Int, log2( maximum(size(y_nD))))
 ```
 """
 function create_grid_warp_samples(
-    alg_trait::UseRieszDSP,
-    y_nD::AbstractArray{T};
-    N_scales = 0
-    ) where T
+        alg_trait::UseRieszDSP,
+        y_nD::AbstractArray{T};
+        N_scales = 0
+    ) where {T}
 
     alg = alg_trait.pkg
     ext = Base.get_extension(@__MODULE__, :RieszDSPExt)
@@ -90,7 +89,7 @@ function create_grid_warp_samples(
     if !proceed_flag
         loaderr_ext_warp_samples_pkg()
     end
-    
+
     return _create_grid_warp_samples(alg_trait, y_nD, N_scales)
 end
 
@@ -128,13 +127,13 @@ In the current implementation, `warp_config` should be a data type of `SpatialGS
 As a post-processing step, `smooth_iters` performs smoothing by applying the adjacency matrix to the warp samples `smooth_iters` times.
 """
 function create_warp_samples(
-    alg_trait::UseSpatialGSP,
-    graph_trait::GraphTrait,
-    X::Vector{AV},
-    y::Vector{T},
-    graph_config,
-    warp_config;
-    smooth_iters::Integer = 0,
+        alg_trait::UseSpatialGSP,
+        graph_trait::GraphTrait,
+        X::Vector{AV},
+        y::Vector{T},
+        graph_config,
+        warp_config;
+        smooth_iters::Integer = 0,
     ) where {T <: Real, AV <: AbstractVector{T}}
 
     alg = alg_trait.pkg
@@ -145,7 +144,7 @@ function create_warp_samples(
     if !proceed_flag
         loaderr_ext_warp_samples_pkg()
     end
-    
+
     return _create_warp_samples(alg_trait, graph_trait, X, y, graph_config, warp_config, smooth_iters)
 end
 
@@ -166,11 +165,11 @@ end
 
 # modified from minute 18 from https://www.youtube.com/watch?v=TiIZlQhFzyk
 function create_warp_map(
-    #alg::Module,
-    alg_trait::UseInterpolations,
-    Xrs::NTuple{D, AR},
-    A::AbstractArray,
-    args...,
+        #alg::Module,
+        alg_trait::UseInterpolations,
+        Xrs::NTuple{D, AR},
+        A::AbstractArray,
+        args...,
     ) where {D, AR <: AbstractRange}
 
     alg = alg_trait.pkg
@@ -185,7 +184,7 @@ function create_warp_map(
     if !proceed_flag
         loaderr_ext_itp_pkg()
     end
-    
+
     return _createitp(alg_trait, Xrs, A, args...)
 end
 
@@ -228,10 +227,10 @@ end
 
 # modified from minute 18 from https://www.youtube.com/watch?v=TiIZlQhFzyk
 function create_warp_map(
-    alg_trait::UseScatteredInterpolation,
-    X::AbstractArray,
-    y::AbstractVector,
-    shepard_p::Real,
+        alg_trait::UseScatteredInterpolation,
+        X::AbstractArray,
+        y::AbstractVector,
+        shepard_p::Real,
     )
 
     alg = alg_trait.pkg
@@ -242,7 +241,40 @@ function create_warp_map(
     if !proceed_flag
         loaderr_ext_itp_pkg()
     end
-    
+
     return _createitp(alg_trait, X, y, shepard_p)
 end
 
+
+#### for use with the ShepardsInterpolations.jl extension.
+
+"""
+    struct UseShepardsInterpolations
+This is a trait data type that indicates ShepardsInterpolations.jl should be used to construct a warp function from a set of warp samples.
+Usage:
+```
+import ShepardsInterpolations
+itp_trait = UseShepardsInterpolations(ShepardsInterpolations)
+```
+"""
+struct UseShepardsInterpolations <: ExtensionPkgs
+    pkg::Module
+end
+
+function create_warp_map(
+        alg_trait::UseShepardsInterpolations,
+        X::AbstractArray,
+        y::AbstractVector,
+    )
+
+    alg = alg_trait.pkg
+    ext_si = Base.get_extension(@__MODULE__, :ShepardsInterpolationsExt)
+
+    # avoid type instability; write one for each extension.
+    proceed_flag = !isnothing(ext_si) && alg == ext_si.ShepardsInterpolations
+    if !proceed_flag
+        loaderr_ext_itp_pkg()
+    end
+
+    return _createitp(alg_trait, X, y)
+end

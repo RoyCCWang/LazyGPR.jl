@@ -71,7 +71,7 @@ N_initials_κ = 100; # Similarly for the κ, gain parameter.
 aggregate_symbol = :sum # An alternative option is :sum_normalized.
 
 if model_selection_string != "ML" &&
-    model_selection_string != "LOOCV"
+        model_selection_string != "LOOCV"
 
     println("Unknown model_selection_string. Default to Marginal likelihood.")
     model_selection_string = "ML"
@@ -120,7 +120,7 @@ L = M # must be an even positive integer. The larger the flatter.
 if isodd(L)
     L = L + 1
 end
-x0, y0 = convert(T, 0.8*M), 1 + convert(T, 0.5)
+x0, y0 = convert(T, 0.8 * M), 1 + convert(T, 0.5)
 s_map = LGP.AdjustmentMap(x0, y0, b_x, L);
 
 # Warp samples, from the unit grid graph.
@@ -136,7 +136,7 @@ W = LGP.create_grid_warp_samples(
 # ## Unit grid vs. axis-search graph
 # We commented the following block out because it takes about a minute to run on our test machine. Uncomment it to see that an axis-search graph would generate the same warp samples as the unit graph. The axis-search graph is O(DN^2), so we don't use it when we know the data is on a uniform grid.
 #X = vec(
-#    collect( 
+#    collect(
 #        convert(Vector{T}, collect(x))
 #        for x in Iterators.product(Xrs...)
 #    )
@@ -169,7 +169,7 @@ ref_can_kernel = LGP.WendlandSplineKernel(
 
 # Optimization tuning parameters.
 max_abs_W = maximum(abs.(W))
-κ_ub = convert(T, (b_x*3) * 1/max_abs_W)
+κ_ub = convert(T, (b_x * 3) * 1 / max_abs_W)
 V = im_y; # The variances for each local dataset.
 
 #lazy-evaluation hyperparameter optimization config
@@ -192,7 +192,7 @@ optim_config = LGP.KernelOptimConfig{T}( # optim_config
 
 # Fit the hyperparameters.
 dek_vars, dek_score, sk_vars, sk_score = compute_kodak_hp(
-    W, σr_factor, Xrs, ref_can_kernel,
+    model, W, σr_factor, Xrs, ref_can_kernel,
     model_selection_trait,
     LGP.UseMetaheuristics(EVO),
     lazy_hopt_config,
@@ -217,8 +217,8 @@ options = LGP.QueryOptions();
 
 up_factor = down_factor
 Xqrs = (
-    LinRange(first(Xrs[1]), last(Xrs[1]), round(Int, length(Xrs[1])*up_factor) ),
-    LinRange(first(Xrs[2]), last(Xrs[2]), round(Int, length(Xrs[2])*up_factor) ),
+    LinRange(first(Xrs[1]), last(Xrs[1]), round(Int, length(Xrs[1]) * up_factor)),
+    LinRange(first(Xrs[2]), last(Xrs[2]), round(Int, length(Xrs[2]) * up_factor)),
 )
 Nr, Nc = length.(Xqrs);
 
@@ -244,8 +244,8 @@ vqs_dek = reshape(vqs_dek_vec, Nr, Nc); #predictive variances.
 #Setup the bi-cubic interpolator.
 itp = Interpolations.interpolate(
     im_y,
-    Interpolations.BSpline( 
-        Interpolations.Cubic(    
+    Interpolations.BSpline(
+        Interpolations.Cubic(
             Interpolations.Line(Interpolations.OnGrid()),
         ),
     ),
@@ -260,7 +260,7 @@ etp = Interpolations.extrapolate(
 #Evaluate at the query positions.
 itp_Xq = collect(
     etp(x...)
-    for x in Iterators.product(Xqrs...)
+        for x in Iterators.product(Xqrs...)
 );
 
 # # VBisualize Results
